@@ -35,6 +35,23 @@ function extractJsonLdItems(html: string): string[] {
             if (text && typeof text === 'string') items.push(text.slice(0, 200));
           }
         }
+        if (entry['@type'] === 'Recipe') {
+          // Ingredients as checkable items
+          if (Array.isArray(entry.recipeIngredient)) {
+            for (const ingredient of entry.recipeIngredient) {
+              if (typeof ingredient === 'string' && ingredient.length > 1) {
+                items.push(ingredient.slice(0, 200));
+              }
+            }
+          }
+          // Instructions as steps
+          if (items.length === 0 && Array.isArray(entry.recipeInstructions)) {
+            for (const step of entry.recipeInstructions) {
+              const text = typeof step === 'string' ? step : (step.text ?? step.name);
+              if (text && typeof text === 'string') items.push(text.slice(0, 200));
+            }
+          }
+        }
       }
     } catch { /* skip invalid JSON */ }
   }
@@ -119,9 +136,12 @@ function extractListsFromHTML(html: string, url: string): string[] {
 
   const items: string[] = [];
 
-  // Remove script and style tags
+  // Remove script, style, and navigation chrome (nav menus would pollute list extraction)
   const cleanHtml = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-                       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+                       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                       .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
+                       .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '')
+                       .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '');
 
   // 2. Try <ol>/<ul> list extraction — most reliable structural signal
   const structuredListItems: string[] = [];
