@@ -4,6 +4,43 @@ import { storage } from "./storage";
 import { urlInputSchema, insertChecklistSchema, insertChecklistItemSchema } from "@shared/schema";
 import { z } from "zod";
 
+class JSRenderedPageError extends Error {
+  constructor() {
+    super('Page is JS-rendered');
+    this.name = 'JSRenderedPageError';
+  }
+}
+
+function extractJsonLdItems(html: string): string[] {
+  const items: string[] = [];
+  const jsonLdPattern = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let match;
+  while ((match = jsonLdPattern.exec(html)) !== null) {
+    try {
+      const raw = JSON.parse(match[1]);
+      const entries: any[] = Array.isArray(raw) ? raw : [raw];
+      for (const entry of entries) {
+        if (entry['@type'] === 'ItemList' && Array.isArray(entry.itemListElement)) {
+          for (const item of entry.itemListElement) {
+            const name = item.name ?? item.item?.name;
+            const pos = item.position;
+            if (name && typeof name === 'string' && name.length > 2 && name.length < 200) {
+              items.push(pos ? `${pos}. ${name}` : name);
+            }
+          }
+        }
+        if (entry['@type'] === 'HowTo' && Array.isArray(entry.step)) {
+          for (const step of entry.step) {
+            const text = step.text ?? step.name;
+            if (text && typeof text === 'string') items.push(text.slice(0, 200));
+          }
+        }
+      }
+    } catch { /* skip invalid JSON */ }
+  }
+  return items;
+}
+
 // Helper function to validate content titles
 function isValidContentTitle(title: string): boolean {
   // Must contain meaningful content
@@ -76,12 +113,42 @@ function isValidListItem(text: string): boolean {
 
 // Simple HTML parsing without external dependencies
 function extractListsFromHTML(html: string, url: string): string[] {
+  // 1. Try JSON-LD structured data first (before stripping removes script content)
+  const jsonLdItems = extractJsonLdItems(html);
+  if (jsonLdItems.length >= 3) return jsonLdItems.slice(0, 100);
+
   const items: string[] = [];
-  
+
   // Remove script and style tags
   const cleanHtml = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
                        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-  
+
+  // 2. Try <ol>/<ul> list extraction — most reliable structural signal
+  const structuredListItems: string[] = [];
+  const listContainerPattern = /<(?:ol|ul)[^>]*>([\s\S]*?)<\/(?:ol|ul)>/gi;
+  let listContainerMatch;
+  while ((listContainerMatch = listContainerPattern.exec(cleanHtml)) !== null) {
+    const listContent = listContainerMatch[1];
+    const liItemPattern = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+    let liItemMatch;
+    while ((liItemMatch = liItemPattern.exec(listContent)) !== null) {
+      const text = liItemMatch[1]
+        .replace(/<[^>]*>/g, '')
+        .replace(/&[a-zA-Z0-9#]+;/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (isValidListItem(text)) structuredListItems.push(text);
+    }
+  }
+  if (structuredListItems.length >= 3) return structuredListItems.slice(0, 100);
+
+  // 3. Detect JS-rendered pages: very little text after stripping = content loads via JS
+  const strippedText = cleanHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  const meaningfulWordCount = strippedText.split(/\s+/).filter(w => /[a-zA-Z]{4,}/.test(w)).length;
+  if (meaningfulWordCount < 100) {
+    throw new JSRenderedPageError();
+  }
+
   // Try specific content extraction approaches first
   // Look for the specific pattern: "01. Title (Director)<br/>02. Title (Director)<br/>..." with HTML entity &amp; 
   const movieListPattern = /(\d{2})\.\s*([^<]*?(?:\([^)]+\))[^<]*?)(?:<br\s*\/?>)/gi;
@@ -768,6 +835,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
+      }
+
+      if (error instanceof JSRenderedPageError) {
+        return res.status(400).json({
+          message: "This page loads its content with JavaScript and can't be read server-side. Try a static page like a blog post, Wikipedia article, or recipe site."
+        });
       }
 
       if (error?.name === 'AbortError') {
