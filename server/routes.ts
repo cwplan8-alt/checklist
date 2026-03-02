@@ -136,12 +136,14 @@ function extractListsFromHTML(html: string, url: string): string[] {
 
   const items: string[] = [];
 
-  // Remove script, style, and navigation chrome (nav menus would pollute list extraction)
+  // Remove script, style, and page chrome (nav/sidebar/comments pollute list extraction)
   const cleanHtml = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
                        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
                        .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
                        .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '')
-                       .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '');
+                       .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
+                       .replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, '')
+                       .replace(/<!--[\s\S]*?-->/g, '');
 
   // 2. Try <ol>/<ul> list extraction — most reliable structural signal
   const structuredListItems: string[] = [];
