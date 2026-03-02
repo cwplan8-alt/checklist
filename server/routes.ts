@@ -169,6 +169,21 @@ function extractListsFromHTML(html: string, url: string): string[] {
     throw new JSRenderedPageError();
   }
 
+  // 4. Try h2/h3 heading extraction — listicle blogs use headings as list items
+  // This runs before noisy number-grabbing patterns to avoid garbage results
+  const headingListItems: string[] = [];
+  const headingTagPattern = /<h[23][^>]*>([\s\S]*?)<\/h[23]>/gi;
+  let headingTagMatch;
+  while ((headingTagMatch = headingTagPattern.exec(cleanHtml)) !== null) {
+    const text = headingTagMatch[1]
+      .replace(/<[^>]*>/g, '')
+      .replace(/&[a-zA-Z0-9#]+;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (isValidListItem(text) && text.length >= 5) headingListItems.push(text);
+  }
+  if (headingListItems.length >= 5) return headingListItems.slice(0, 100);
+
   // Try specific content extraction approaches first
   // Look for the specific pattern: "01. Title (Director)<br/>02. Title (Director)<br/>..." with HTML entity &amp; 
   const movieListPattern = /(\d{2})\.\s*([^<]*?(?:\([^)]+\))[^<]*?)(?:<br\s*\/?>)/gi;
