@@ -1,0 +1,262 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Clean minimal theme */
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(222, 84%, 4.9%);
+  --muted: hsl(210, 40%, 98%);
+  --muted-foreground: hsl(215, 16%, 47%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(222, 84%, 4.9%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(222, 84%, 4.9%);
+  --border: hsl(214, 32%, 91%);
+  --input: hsl(214, 32%, 91%);
+  --primary: hsl(262, 83%, 58%); /* Purple accent */
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(210, 40%, 98%);
+  --secondary-foreground: hsl(222, 84%, 4.9%);
+  --accent: hsl(210, 40%, 98%);
+  --accent-foreground: hsl(222, 84%, 4.9%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(262, 83%, 58%);
+  --radius: 0.75rem;
+  --success: hsl(142, 76%, 36%);
+  --error: hsl(0, 84%, 60%);
+}
+
+.dark {
+  --background: hsl(222, 84%, 4.9%);
+  --foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 32%, 17%);
+  --muted-foreground: hsl(215, 16%, 47%);
+  --popover: hsl(222, 84%, 4.9%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 84%, 4.9%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 32%, 17%);
+  --input: hsl(217, 32%, 17%);
+  --primary: hsl(262, 83%, 58%);
+  --primary-foreground: hsl(222, 84%, 4.9%);
+  --secondary: hsl(217, 32%, 17%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --accent: hsl(217, 32%, 17%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 63%, 31%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(262, 83%, 58%);
+  --success: hsl(142, 76%, 36%);
+  --error: hsl(0, 84%, 60%);
+}
+
+/* Subtle animations */
+@keyframes gentle-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes soft-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.3); }
+  50% { box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1); }
+}
+
+.gentle-pulse {
+  animation: gentle-pulse 2s ease-in-out infinite;
+}
+
+.soft-glow {
+  animation: soft-glow 2s ease-in-out infinite;
+}
+
+.elegant-card {
+  background: white;
+  border: 1px solid hsl(214, 32%, 91%);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease;
+}
+
+.elegant-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-color: hsl(262, 83%, 58%);
+}
+
+.elegant-button {
+  background: linear-gradient(135deg, hsl(262, 83%, 58%) 0%, hsl(262, 83%, 65%) 100%);
+  color: white;
+  border: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.elegant-button:hover {
+  background: linear-gradient(135deg, hsl(262, 83%, 65%) 0%, hsl(262, 83%, 70%) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+}
+
+.elegant-input {
+  border: 1px solid hsl(214, 32%, 91%);
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.elegant-input:focus {
+  border-color: hsl(262, 83%, 58%);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  outline: none;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply antialiased bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    min-height: 100vh;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+  }
+  
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+  
+  .elegant-text {
+    background: linear-gradient(135deg, hsl(262, 83%, 58%) 0%, hsl(262, 83%, 65%) 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+/* Clean component styles */
+.bg-slate-50 {
+  background-color: hsl(210, 40%, 98%);
+}
+
+.text-slate-900 {
+  color: hsl(222, 84%, 4.9%);
+}
+
+.text-slate-600 {
+  color: hsl(215, 16%, 47%);
+}
+
+.text-slate-500 {
+  color: hsl(215, 20%, 65%);
+}
+
+.text-slate-400 {
+  color: hsl(215, 16%, 47%);
+}
+
+.border-slate-200 {
+  border-color: hsl(214, 32%, 91%);
+}
+
+.border-slate-300 {
+  border-color: hsl(214, 32%, 91%);
+}
+
+.bg-slate-100 {
+  background-color: hsl(210, 40%, 98%);
+}
+
+.bg-slate-200 {
+  background-color: hsl(214, 32%, 91%);
+}
+
+.hover\:bg-slate-50:hover {
+  background-color: hsl(210, 40%, 98%);
+}
+
+.hover\:bg-slate-200:hover {
+  background-color: hsl(214, 32%, 91%);
+}
+
+.text-primary {
+  color: hsl(262, 83%, 58%);
+}
+
+.bg-primary {
+  background-color: hsl(262, 83%, 58%);
+}
+
+.bg-primary\/10 {
+  background-color: rgba(139, 92, 246, 0.1);
+}
+
+.text-success {
+  color: hsl(142, 76%, 36%);
+}
+
+.bg-success {
+  background-color: hsl(142, 76%, 36%);
+}
+
+.bg-success\/10 {
+  background-color: rgba(34, 197, 94, 0.1);
+}
+
+.text-error {
+  color: hsl(0, 84%, 60%);
+}
+
+.bg-error {
+  background-color: hsl(0, 84%, 60%);
+}
+
+.border-red-200 {
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.text-secondary {
+  color: hsl(215, 16%, 47%);
+}
+
+.bg-secondary\/10 {
+  background-color: rgba(107, 114, 128, 0.1);
+}
+
+/* Elegant checkbox styles */
+.elegant-checkbox {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid hsl(214, 32%, 91%);
+  border-radius: 4px;
+  background: white;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.elegant-checkbox:checked {
+  background: hsl(262, 83%, 58%);
+  border-color: hsl(262, 83%, 58%);
+}
+
+.elegant-checkbox:checked::after {
+  content: '✓';
+  position: absolute;
+  top: -2px;
+  left: 2px;
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.elegant-checkbox:hover {
+  border-color: hsl(262, 83%, 58%);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
