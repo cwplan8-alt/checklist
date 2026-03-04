@@ -145,7 +145,24 @@ function extractListsFromHTML(html: string, url: string): string[] {
                        .replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, '')
                        .replace(/<!--[\s\S]*?-->/g, '');
 
-  // 2. Try <ol>/<ul> list extraction — most reliable structural signal
+  // 2. Try numbered h2/h3 headings first — listicle blogs number their section headings
+  // e.g. <h2>1. Greece (9.8)</h2> — these start with a digit
+  const numberedHeadingItems: string[] = [];
+  const numberedHeadingPattern = /<h[23][^>]*>([\s\S]*?)<\/h[23]>/gi;
+  let numberedHeadingMatch;
+  while ((numberedHeadingMatch = numberedHeadingPattern.exec(cleanHtml)) !== null) {
+    const text = numberedHeadingMatch[1]
+      .replace(/<[^>]*>/g, '')
+      .replace(/&[a-zA-Z0-9#]+;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (/^\d/.test(text) && isValidListItem(text) && text.length >= 5) {
+      numberedHeadingItems.push(text);
+    }
+  }
+  if (numberedHeadingItems.length >= 5) return numberedHeadingItems.slice(0, 100);
+
+  // 3. Try <ol>/<ul> list extraction, skipping link-only lists (related posts, nav)
   const structuredListItems: string[] = [];
   const listContainerPattern = /<(?:ol|ul)[^>]*>([\s\S]*?)<\/(?:ol|ul)>/gi;
   let listContainerMatch;
@@ -153,26 +170,39 @@ function extractListsFromHTML(html: string, url: string): string[] {
     const listContent = listContainerMatch[1];
     const liItemPattern = /<li[^>]*>([\s\S]*?)<\/li>/gi;
     let liItemMatch;
+    const thisListItems: { text: string; isLinkOnly: boolean }[] = [];
     while ((liItemMatch = liItemPattern.exec(listContent)) !== null) {
-      const text = liItemMatch[1]
+      const rawHtml = liItemMatch[1];
+      // Text remaining after removing <a> tags and their content
+      const textOutsideLinks = rawHtml
+        .replace(/<a[^>]*>[\s\S]*?<\/a>/gi, '')
+        .replace(/<[^>]*>/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const fullText = rawHtml
         .replace(/<[^>]*>/g, '')
         .replace(/&[a-zA-Z0-9#]+;/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
-      if (isValidListItem(text)) structuredListItems.push(text);
+      const isLinkOnly = fullText.length > 3 && textOutsideLinks.length < 3;
+      if (isValidListItem(fullText)) thisListItems.push({ text: fullText, isLinkOnly });
     }
+    if (thisListItems.length === 0) continue;
+    // Skip lists that are mostly link-only items (related posts, navigation)
+    const linkOnlyRatio = thisListItems.filter(i => i.isLinkOnly).length / thisListItems.length;
+    if (linkOnlyRatio > 0.7) continue;
+    structuredListItems.push(...thisListItems.map(i => i.text));
   }
   if (structuredListItems.length >= 3) return structuredListItems.slice(0, 100);
 
-  // 3. Detect JS-rendered pages: very little text after stripping = content loads via JS
+  // 4. Detect JS-rendered pages: very little text after stripping = content loads via JS
   const strippedText = cleanHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   const meaningfulWordCount = strippedText.split(/\s+/).filter(w => /[a-zA-Z]{4,}/.test(w)).length;
   if (meaningfulWordCount < 100) {
     throw new JSRenderedPageError();
   }
 
-  // 4. Try h2/h3 heading extraction — listicle blogs use headings as list items
-  // This runs before noisy number-grabbing patterns to avoid garbage results
+  // 5. Try unnumbered h2/h3 heading extraction — blog posts listing items without numbers
   const headingListItems: string[] = [];
   const headingTagPattern = /<h[23][^>]*>([\s\S]*?)<\/h[23]>/gi;
   let headingTagMatch;
