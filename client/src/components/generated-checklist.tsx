@@ -48,19 +48,25 @@ export default function GeneratedChecklist({ checklist: initialChecklist }: Gene
   };
 
   const handleExport = () => {
-    const lines = [
-      checklist.title,
-      `Source: ${checklist.sourceUrl}`,
-      "",
-      ...checklist.items.map(item =>
-        `[${item.isCompleted ? "x" : " "}] ${item.text}`
-      ),
+    const escape = (s: string) => `"${s.replace(/"/g, '""')}"`;
+    const rows = [
+      ["#", "Item", "Status"],
+      ...checklist.items.map((item, i) => [
+        String(i + 1),
+        escape(item.text),
+        item.isCompleted ? "Done" : "Not done",
+      ]),
     ];
-    const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+    const csv = [
+      `# ${checklist.title}`,
+      `# Source: ${checklist.sourceUrl}`,
+      rows.map(r => r.join(",")).join("\n"),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${checklist.title.replace(/[^a-z0-9]/gi, "_").slice(0, 50)}_checklist.txt`;
+    a.download = `${checklist.title.replace(/[^a-z0-9]/gi, "_").slice(0, 50)}_checklist.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -125,10 +131,11 @@ export default function GeneratedChecklist({ checklist: initialChecklist }: Gene
 
       {/* Checklist Items */}
       <div className="space-y-1">
-        {checklist.items.map((item) => (
+        {checklist.items.map((item, index) => (
           <ChecklistItemRow
             key={item.id}
             item={item}
+            index={index + 1}
             onCheckboxChange={handleCheckboxChange}
           />
         ))}
@@ -167,10 +174,11 @@ export default function GeneratedChecklist({ checklist: initialChecklist }: Gene
 
 interface ChecklistItemRowProps {
   item: ChecklistItem;
+  index: number;
   onCheckboxChange: (itemId: number, checked: boolean) => void;
 }
 
-function ChecklistItemRow({ item, onCheckboxChange }: ChecklistItemRowProps) {
+function ChecklistItemRow({ item, index, onCheckboxChange }: ChecklistItemRowProps) {
   return (
     <label
       className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
@@ -181,6 +189,9 @@ function ChecklistItemRow({ item, onCheckboxChange }: ChecklistItemRowProps) {
         onCheckedChange={(checked) => onCheckboxChange(item.id, checked as boolean)}
         className="elegant-checkbox mt-0.5 shrink-0"
       />
+      <span className="text-slate-400 text-sm font-mono mt-0.5 shrink-0 w-6 text-right select-none">
+        {index}.
+      </span>
       <span
         className={`text-slate-900 leading-snug select-none ${
           item.isCompleted ? "line-through text-slate-400" : ""

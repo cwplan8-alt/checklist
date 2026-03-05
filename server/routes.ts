@@ -165,8 +165,12 @@ function extractListsFromHTML(html: string, url: string): string[] {
   }
   if (numberedHeadingItems.length >= 5) return numberedHeadingItems.slice(0, 100);
 
-  // 3. Try <ol>/<ul> list extraction, skipping link-only lists (related posts, nav)
-  // Collect each list separately so we can pick the dominant one instead of blindly merging
+  // 3. Try <ol>/<ul> AND h2/h3 extraction together — return whichever gives more items.
+  // Reason: some sites put content in <ul> (best for ul extraction), others use h2/h3 headings
+  // (e.g. culturetrekking). Running both and picking the winner avoids ul/li nav noise blocking
+  // the h2/h3 content extraction that comes later.
+
+  // 3a. Collect ul/li lists
   const allValidLists: string[][] = [];
   const listContainerPattern = /<(?:ol|ul)[^>]*>([\s\S]*?)<\/(?:ol|ul)>/gi;
   let listContainerMatch;
@@ -177,7 +181,6 @@ function extractListsFromHTML(html: string, url: string): string[] {
     const thisListItems: { text: string; isLinkOnly: boolean }[] = [];
     while ((liItemMatch = liItemPattern.exec(listContent)) !== null) {
       const rawHtml = liItemMatch[1];
-      // Text remaining after removing <a> tags and their content
       const textOutsideLinks = rawHtml
         .replace(/<a[^>]*>[\s\S]*?<\/a>/gi, '')
         .replace(/<[^>]*>/g, '')
@@ -192,34 +195,22 @@ function extractListsFromHTML(html: string, url: string): string[] {
       if (isValidListItem(fullText)) thisListItems.push({ text: fullText, isLinkOnly });
     }
     if (thisListItems.length === 0) continue;
-    // Skip lists that are mostly link-only items (related posts, navigation)
     const linkOnlyRatio = thisListItems.filter(i => i.isLinkOnly).length / thisListItems.length;
     if (linkOnlyRatio > 0.7) continue;
     allValidLists.push(thisListItems.map(i => i.text));
   }
+  // Pick the dominant ul/li list (3x bigger than next) or merge
+  let bestUlLi: string[] = [];
   if (allValidLists.length > 0) {
-    // Sort by size descending
     allValidLists.sort((a, b) => b.length - a.length);
     const largest = allValidLists[0];
     const secondLargest = allValidLists[1]?.length ?? 0;
-    // If the largest list is clearly dominant (3x bigger), return it alone.
-    // This prevents nav/footer noise lists from polluting the main content list.
-    if (largest.length >= 3 && (allValidLists.length === 1 || largest.length >= secondLargest * 3)) {
-      return largest.slice(0, 100);
-    }
-    // Otherwise merge all lists (e.g. page has multiple equally-sized content lists)
-    const merged = allValidLists.flat();
-    if (merged.length >= 3) return merged.slice(0, 100);
+    bestUlLi = (allValidLists.length === 1 || largest.length >= secondLargest * 3)
+      ? largest
+      : allValidLists.flat();
   }
 
-  // 4. Detect JS-rendered pages: very little text after stripping = content loads via JS
-  const strippedText = cleanHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-  const meaningfulWordCount = strippedText.split(/\s+/).filter(w => /[a-zA-Z]{4,}/.test(w)).length;
-  if (meaningfulWordCount < 100) {
-    throw new JSRenderedPageError();
-  }
-
-  // 5. Try unnumbered h2/h3 heading extraction — blog posts listing items without numbers
+  // 3b. Collect unnumbered h2/h3 headings (blog posts that use headings instead of lists)
   const headingListItems: string[] = [];
   const headingTagPattern = /<h[23][^>]*>([\s\S]*?)<\/h[23]>/gi;
   let headingTagMatch;
@@ -231,7 +222,20 @@ function extractListsFromHTML(html: string, url: string): string[] {
       .trim();
     if (isValidListItem(text) && text.length >= 5) headingListItems.push(text);
   }
-  if (headingListItems.length >= 5) return headingListItems.slice(0, 100);
+
+  // 3c. Return whichever gives more items — h2/h3 wins ties since ul/li often has nav noise
+  {
+    const useHeadings = headingListItems.length >= 5 && headingListItems.length > bestUlLi.length;
+    const best = useHeadings ? headingListItems : bestUlLi;
+    if (best.length >= 3) return best.slice(0, 100);
+  }
+
+  // 4. Detect JS-rendered pages: very little text after stripping = content loads via JS
+  const strippedText = cleanHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  const meaningfulWordCount = strippedText.split(/\s+/).filter(w => /[a-zA-Z]{4,}/.test(w)).length;
+  if (meaningfulWordCount < 100) {
+    throw new JSRenderedPageError();
+  }
 
   // Try specific content extraction approaches first
   // Look for the specific pattern: "01. Title (Director)<br/>02. Title (Director)<br/>..." with HTML entity &amp; 
