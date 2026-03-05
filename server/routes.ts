@@ -103,6 +103,9 @@ function isValidListItem(text: string): boolean {
     /^(longform|movies|reviews|trailers|features|video|shop|podcasts)/i,
     /^(visit us|share on|contact|advertise)/i,
     /^(facebook|twitter|instagram|youtube)/i,
+    /^welcome to\b/i,
+    /\bpin it\b/i,
+    /sharing is caring/i,
     /^[a-zA-Z0-9]{15,}$/, // Long alphanumeric strings (likely encoded/hash values)
     /^[A-Z]{10,}$/, // Long all-caps strings
     /^[a-z]{10,}$/, // Long all-lowercase strings
@@ -163,7 +166,8 @@ function extractListsFromHTML(html: string, url: string): string[] {
   if (numberedHeadingItems.length >= 5) return numberedHeadingItems.slice(0, 100);
 
   // 3. Try <ol>/<ul> list extraction, skipping link-only lists (related posts, nav)
-  const structuredListItems: string[] = [];
+  // Collect each list separately so we can pick the dominant one instead of blindly merging
+  const allValidLists: string[][] = [];
   const listContainerPattern = /<(?:ol|ul)[^>]*>([\s\S]*?)<\/(?:ol|ul)>/gi;
   let listContainerMatch;
   while ((listContainerMatch = listContainerPattern.exec(cleanHtml)) !== null) {
@@ -191,9 +195,22 @@ function extractListsFromHTML(html: string, url: string): string[] {
     // Skip lists that are mostly link-only items (related posts, navigation)
     const linkOnlyRatio = thisListItems.filter(i => i.isLinkOnly).length / thisListItems.length;
     if (linkOnlyRatio > 0.7) continue;
-    structuredListItems.push(...thisListItems.map(i => i.text));
+    allValidLists.push(thisListItems.map(i => i.text));
   }
-  if (structuredListItems.length >= 3) return structuredListItems.slice(0, 100);
+  if (allValidLists.length > 0) {
+    // Sort by size descending
+    allValidLists.sort((a, b) => b.length - a.length);
+    const largest = allValidLists[0];
+    const secondLargest = allValidLists[1]?.length ?? 0;
+    // If the largest list is clearly dominant (3x bigger), return it alone.
+    // This prevents nav/footer noise lists from polluting the main content list.
+    if (largest.length >= 3 && (allValidLists.length === 1 || largest.length >= secondLargest * 3)) {
+      return largest.slice(0, 100);
+    }
+    // Otherwise merge all lists (e.g. page has multiple equally-sized content lists)
+    const merged = allValidLists.flat();
+    if (merged.length >= 3) return merged.slice(0, 100);
+  }
 
   // 4. Detect JS-rendered pages: very little text after stripping = content loads via JS
   const strippedText = cleanHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
