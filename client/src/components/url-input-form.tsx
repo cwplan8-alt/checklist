@@ -16,9 +16,9 @@ interface UrlInputFormProps {
 }
 
 const EXAMPLE_URLS = [
-  "https://screencrush.com/new-york-times-best-films-21st-century/",
   "https://www.allrecipes.com/recipe/10813/best-chocolate-chip-cookies/",
-  "https://www.wikihow.com/Make-Pancakes"
+  "https://www.wikihow.com/Make-Pancakes",
+  "https://www.wikihow.com/Pack-a-Suitcase",
 ];
 
 export default function UrlInputForm({ onChecklistGenerated, onLoading, onError }: UrlInputFormProps) {

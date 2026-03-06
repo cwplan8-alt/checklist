@@ -78,15 +78,18 @@ export default function GeneratedChecklist({ checklist: initialChecklist }: Gene
   };
 
   const handleShare = async () => {
-    const url = window.location.href;
+    const shareUrl = checklist.shareToken
+      ? `${window.location.origin}/c/${checklist.shareToken}`
+      : window.location.href;
     if (navigator.share) {
       try {
-        await navigator.share({ title: checklist.title, url });
+        await navigator.share({ title: checklist.title, url: shareUrl });
       } catch {
         // user cancelled
       }
     } else {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(shareUrl);
+      // Brief visual feedback via title change isn't reliable; just copy silently
     }
   };
 

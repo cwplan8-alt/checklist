@@ -13,6 +13,7 @@ import { createDb } from "./db";
 export interface IStorage {
   createChecklist(checklist: InsertChecklist): Promise<Checklist>;
   getChecklist(id: number): Promise<ChecklistWithItems | undefined>;
+  getChecklistByShareToken(token: string): Promise<ChecklistWithItems | undefined>;
   updateChecklistProgress(id: number, completedItems: number): Promise<void>;
   createChecklistItems(items: InsertChecklistItem[]): Promise<ChecklistItem[]>;
   updateChecklistItem(id: number, isCompleted: boolean): Promise<ChecklistItem | undefined>;
@@ -55,6 +56,12 @@ export class MemStorage implements IStorage {
       .sort((a, b) => a.order - b.order);
 
     return { ...checklist, items };
+  }
+
+  async getChecklistByShareToken(token: string): Promise<ChecklistWithItems | undefined> {
+    const checklist = Array.from(this.checklists.values()).find(c => c.shareToken === token);
+    if (!checklist) return undefined;
+    return this.getChecklist(checklist.id);
   }
 
   async updateChecklistProgress(id: number, completedItems: number): Promise<void> {
@@ -128,6 +135,23 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(checklistItems)
       .where(eq(checklistItems.checklistId, id))
+      .orderBy(checklistItems.order);
+
+    return { ...checklist, items };
+  }
+
+  async getChecklistByShareToken(token: string): Promise<ChecklistWithItems | undefined> {
+    const [checklist] = await this.db
+      .select()
+      .from(checklists)
+      .where(eq(checklists.shareToken, token));
+
+    if (!checklist) return undefined;
+
+    const items = await this.db
+      .select()
+      .from(checklistItems)
+      .where(eq(checklistItems.checklistId, checklist.id))
       .orderBy(checklistItems.order);
 
     return { ...checklist, items };

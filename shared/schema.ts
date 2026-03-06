@@ -1,9 +1,10 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const checklists = pgTable("checklists", {
   id: serial("id").primaryKey(),
+  shareToken: uuid("share_token").defaultRandom(),
   sourceUrl: text("source_url").notNull(),
   title: text("title").notNull(),
   totalItems: integer("total_items").notNull().default(0),

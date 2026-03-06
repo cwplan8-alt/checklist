@@ -53,11 +53,13 @@ export default function Home() {
         </div>
 
         {/* URL Input Form */}
-        <UrlInputForm 
-          onChecklistGenerated={handleChecklistGenerated}
-          onLoading={handleLoading}
-          onError={handleError}
-        />
+        <div id="try-it">
+          <UrlInputForm
+            onChecklistGenerated={handleChecklistGenerated}
+            onLoading={handleLoading}
+            onError={handleError}
+          />
+        </div>
 
         {/* Loading State */}
         {isLoading && <LoadingState />}
@@ -69,7 +71,9 @@ export default function Home() {
         {checklist && <GeneratedChecklist checklist={checklist} />}
 
         {/* Features Section */}
-        <FeaturesSection />
+        <div id="how-it-works">
+          <FeaturesSection />
+        </div>
       </main>
 
       <Footer />
