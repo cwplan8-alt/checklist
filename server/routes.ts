@@ -124,13 +124,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      if (error instanceof TypeError && error.message.includes('fetch')) {
+      if (error instanceof TypeError) {
         return res.status(400).json({
-          message: "Unable to access the URL. Please check that the URL is correct and accessible."
+          message: "Unable to access the URL. Please check that it is correct and publicly accessible."
         });
       }
 
-      console.error('Error processing URL:', error);
+      console.error('Error processing URL [type=%s message=%s cause=%s]:', error?.constructor?.name, error?.message, (error as any)?.cause);
       res.status(500).json({
         message: "An error occurred while processing the URL. Please try again."
       });
